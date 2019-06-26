@@ -1,0 +1,55 @@
+
+* Rustlnd
+
+There are two main goals for this project:
+
+1) Create a simple daemon for [[https://github.com/rust-bitcoin/rust-lightning][rust-lightning]] so that it can be included in [[https://github.com/cdecker/lightning-integration][lightning-integration]] and pass the integration tests.
+
+2) Support multiple chains simultaneously for demo purposes. For example, [[https://github.com/jtimon/multi-ln-demo][multi-ln-demo]] aims to demonstrate a lightning payment across different chains assuming a design in which some nodes act as chain hops by having and allowing to route through (for any payer connected to all involved chains' gossip networks) channels in 2 or more chains.
+
+The following warnings shouldn't be necessary, because there is nothing to use yet anyway, but just in case:
+
+DO NOT USE THIS for ANYTHING OTHER THAN TESTING OR DEMOS.
+
+DO NOT USE THIS with REAL MONEY.
+
+DO NOT USE THIS in PRODUCTION.
+
+In case 3 times in uppercase wasn't enough:
+
+JUST DON'T USE THIS.
+
+* Usage
+
+```
+cargo build && cargo run -- -chain=aaa -chain=bbb -p2phost=localhost:8888
+```
+
+For help:
+
+```
+cargo build && cargo run -- --help -chain=aaa -chain=bbb -p2phost=localhost:8888
+```
+
+or
+
+```
+cargo build && cargo run -- --help
+```
+
+To use regtest:
+
+```
+cargo build && cargo run -- -p2phost=localhost:8888
+```
+
+For development, the following can be another example:
+
+```
+cargo test && cargo run -- --help && cargo run -- -chain=aaa -chain=bbb -p2phost=localhost:8888
+```
+
+
+* License
+
+MIT
