@@ -5,6 +5,7 @@ use std::env;
 #[derive(Debug)]
 enum ArgType {
     ArgBool,
+    ArgMultistr,
     ArgStr,
 }
 
@@ -12,12 +13,14 @@ enum ArgType {
 struct ArgumentHelp {
     arg_type: ArgType,
     default: Option<String>,
+    default_multi: Vec<String>,
     description: String,
 }
 
 pub struct ArgMan {
     args: HashMap<String, String>,
     args_help: HashMap<String, ArgumentHelp>,
+    args_multi: HashMap<String, Vec<String>>,
 }
 
 impl ArgMan {
@@ -26,22 +29,25 @@ impl ArgMan {
         ArgMan {
             args_help: HashMap::new(),
             args: HashMap::new(),
+            args_multi: HashMap::new(),
         }
     }
 
     pub fn add_arg_unset(&mut self, name: &str, description: &str) {
         self.args_help.insert(name.to_string(), ArgumentHelp{
-            description: description.to_string(),
-            default: None,
             arg_type: ArgType::ArgStr,
+            default: None,
+            default_multi: vec![],
+            description: description.to_string(),
         });
     }
 
     pub fn add_arg(&mut self, name: &str, default: String, description: &str) {
         self.args_help.insert(name.to_string(), ArgumentHelp{
-            description: description.to_string(),
-            default: Some(default),
             arg_type: ArgType::ArgStr,
+            default: Some(default),
+            default_multi: vec![],
+            description: description.to_string(),
         });
     }
 
@@ -53,7 +59,17 @@ impl ArgMan {
         self.args_help.insert(name.to_string(), ArgumentHelp{
             description: description.to_string(),
             default: Some(default),
+            default_multi: vec![],
             arg_type: ArgType::ArgBool,
+        });
+    }
+
+    pub fn add_arg_multi(&mut self, name: &str, default_multi: Vec<String>, description: &str) {
+        self.args_help.insert(name.to_string(), ArgumentHelp{
+            description: description.to_string(),
+            default: None,
+            default_multi,
+            arg_type: ArgType::ArgMultistr,
         });
     }
 
@@ -71,6 +87,7 @@ impl ArgMan {
     }
 
     fn set_arg(&mut self, name: &str, value_to_add: String) -> bool {
+
         match self.args_help.get(name).unwrap().arg_type {
 
             ArgType::ArgStr => {
@@ -87,6 +104,14 @@ impl ArgMan {
                     },
                 }
                 self.args.insert(name.to_string(), value_to_add);
+            },
+
+            ArgType::ArgMultistr => {
+                if self.args_multi.contains_key(name) {
+                    self.args_multi.get_mut(name).unwrap().push(value_to_add);
+                } else {
+                    self.args_multi.insert(name.to_string(), vec![value_to_add]);
+                }
             },
         }
         true
@@ -119,6 +144,11 @@ impl ArgMan {
                     }
                 },
 
+                ArgType::ArgMultistr => {
+                    if !self.args_multi.contains_key(name) {
+                        self.args_multi.insert(name.to_string(), arg_help.default_multi.clone());
+                    }
+                },
             }
         }
     }
@@ -166,7 +196,7 @@ impl ArgMan {
     }
 
     pub fn is_none(&self, arg_name: &str) -> bool {
-        return self.args.get(arg_name).is_none();
+        return self.args.get(arg_name).is_none() && self.args_multi.get(arg_name).is_none();
     }
 
     fn _common_get(&self, arg_name: &str) {
@@ -174,8 +204,12 @@ impl ArgMan {
             panic!("Argument {} is not defined.", arg_name);
         }
 
-        if self.is_none(arg_name) {
-            panic!("Argument {} is not set.", arg_name);
+        if self.args.get(arg_name).is_none() {
+            if self.args_multi.get(arg_name).is_none() {
+                panic!("Argument {} is not set.", arg_name);
+            } else {
+                panic!("Argument {} is an argument that can be repeated, try 'g_args.get_multi(\"{}\")'.", arg_name, arg_name);
+            }
         }
     }
 
@@ -206,9 +240,29 @@ impl ArgMan {
         }
     }
 
+    pub fn get_multi(&self, arg_name: &str) -> &Vec<String> {
+        if !self.args_help.contains_key(arg_name) {
+            panic!("Argument {} is not defined.", arg_name);
+        }
+
+        if self.args_multi.get(arg_name).is_none() {
+            if self.args.get(arg_name).is_none() {
+                panic!("Argument {} is not set.", arg_name);
+            } else {
+                panic!("Argument {} is an argument that cannot be repeated, try 'g_args.get(\"{}\")'.", arg_name, arg_name);
+            }
+        }
+
+        return self.args_multi.get(arg_name).unwrap();
+    }
+
     pub fn dev_print_selected_args(&self) {
         println!("\nThe following args were selected:\n");
         for (name, arg) in &self.args {
+            println!("{}: {:?}", name, arg);
+        }
+        println!("\nThe following args_multi were selected:\n");
+        for (name, arg) in &self.args_multi {
             println!("{}: {:?}", name, arg);
         }
     }
