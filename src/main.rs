@@ -13,7 +13,7 @@ fn create_global_args() -> argman::ArgMan {
                    "bitcoind RPC username");
     g_args.add_arg_unset("-rpcpass",
                    "bitcoind RPC password");
-    g_args.add_arg("-daemon", "0".to_string(),
+    g_args.add_arg_bool("-daemon", "0".to_string(),
                    "Run in background");
 
     g_args
@@ -41,4 +41,9 @@ fn main() {
     if !g_args.is_none("-rpchost") {
         sim_get_arg(&g_args, "-rpchost");
     }
+
+    if g_args.get_bool("-daemon") {
+        println!("\nRunning the daemon in the background...");
+    }
+
 }
