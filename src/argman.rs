@@ -245,12 +245,17 @@ impl ArgMan {
             panic!("Argument {} is not defined.", arg_name);
         }
 
-        if self.args_multi.get(arg_name).is_none() {
-            if self.args.get(arg_name).is_none() {
-                panic!("Argument {} is not set.", arg_name);
-            } else {
-                panic!("Argument {} is an argument that cannot be repeated, try 'g_args.get(\"{}\")'.", arg_name, arg_name);
-            }
+        match self.args_help.get(arg_name).unwrap().arg_type {
+            ArgType::ArgMultistr => {
+                if self.args_multi.get(arg_name).is_none() {
+                    if self.args.get(arg_name).is_none() {
+                        panic!("Argument {} is not set.", arg_name);
+                    } else {
+                        panic!("Argument {} is an argument that cannot be repeated, try 'ArgMan::get(\"{}\")'.", arg_name, arg_name);
+                    }
+                }
+            },
+            _ => panic!("get_multi is being used for {}, which is not defined as a multistr arg", arg_name),
         }
 
         return self.args_multi.get(arg_name).unwrap();

@@ -145,7 +145,7 @@ fn test_undefined_multi() {
 }
 
 #[test]
-#[should_panic(expected = "Argument -aaa is not set.")]
+#[should_panic(expected = "get_multi is being used for -aaa, which is not defined as a multistr arg")]
 fn test_defined_unset_multi() {
     let raw_args = vec!["binname".to_string()];
     let mut g_args = argman::ArgMan::new();
