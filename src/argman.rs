@@ -3,7 +3,14 @@ use std::collections::HashMap;
 use std::env;
 
 #[derive(Debug)]
+enum ArgType {
+    ArgBool,
+    ArgStr,
+}
+
+#[derive(Debug)]
 struct ArgumentHelp {
+    arg_type: ArgType,
     default: Option<String>,
     description: String,
 }
@@ -26,6 +33,7 @@ impl ArgMan {
         self.args_help.insert(name.to_string(), ArgumentHelp{
             description: description.to_string(),
             default: None,
+            arg_type: ArgType::ArgStr,
         });
     }
 
@@ -33,6 +41,19 @@ impl ArgMan {
         self.args_help.insert(name.to_string(), ArgumentHelp{
             description: description.to_string(),
             default: Some(default),
+            arg_type: ArgType::ArgStr,
+        });
+    }
+
+    pub fn add_arg_bool(&mut self, name: &str, default: String, description: &str) {
+        if default != "0" && default != "1" {
+            println!("The default was {}", default);
+            panic!("A bool arg can only be 0 or 1 by default (and in general too)");
+        }
+        self.args_help.insert(name.to_string(), ArgumentHelp{
+            description: description.to_string(),
+            default: Some(default),
+            arg_type: ArgType::ArgBool,
         });
     }
 
@@ -49,21 +70,55 @@ impl ArgMan {
         }
     }
 
-    fn set_arg(&mut self, name: &str, value_to_add: String) {
-        self.args.insert(name.to_string(), value_to_add);
+    fn set_arg(&mut self, name: &str, value_to_add: String) -> bool {
+        match self.args_help.get(name).unwrap().arg_type {
+
+            ArgType::ArgStr => {
+                self.args.insert(name.to_string(), value_to_add);
+            },
+
+            ArgType::ArgBool => {
+                match &value_to_add[..] {
+                    "0" => {},
+                    "1"  => {},
+                    _ => {
+                        println!("'{}' cannot be parsed as bool (only '0' or '1' allowed')", name);
+                        return false;
+                    },
+                }
+                self.args.insert(name.to_string(), value_to_add);
+            },
+        }
+        true
     }
 
     pub fn set_defaults(&mut self) {
         for (name, arg_help) in &self.args_help {
+            match arg_help.arg_type {
 
-            if !self.args.contains_key(name) {
-                match &arg_help.default {
-                    None => println!("Warning: No default for unset argument {}", name),
-                    Some(default_value) => {
-                        println!("Insert default argument : {}: {:?}", name, default_value);
-                        self.args.insert(name.to_string(), default_value.to_string());
-                    },
-                }
+                ArgType::ArgStr => {
+                    if !self.args.contains_key(name) {
+                        match &arg_help.default {
+                            None => println!("Warning: No default for unset argument {}", name),
+                            Some(default_value) => {
+                                println!("Insert default argument : {}: {:?}", name, default_value);
+                                self.args.insert(name.to_string(), default_value.to_string());
+                            },
+                        }
+                    }
+                },
+
+                ArgType::ArgBool => {
+                    if arg_help.default.is_none() {
+                        panic!("Bool args should always have a default unlike somehow bool arg '{}'", name);
+                    } else {
+                        if !self.args.contains_key(name) {
+                            println!("Insert default argument : {}: {:?}", name, &arg_help.default);
+                            self.args.insert(name.to_string(), arg_help.default.clone().unwrap());
+                        }
+                    }
+                },
+
             }
         }
     }
@@ -98,7 +153,9 @@ impl ArgMan {
                 return false;
             } else {
                 let value_to_add = raw_arg_split[1].to_string();
-                self.set_arg(name, value_to_add);
+                if !self.set_arg(name, value_to_add) {
+                    return false;
+                }
             }
         }
 
@@ -112,7 +169,7 @@ impl ArgMan {
         return self.args.get(arg_name).is_none();
     }
 
-    pub fn get(&self, arg_name: &str) -> &str {
+    fn _common_get(&self, arg_name: &str) {
         if !self.args_help.contains_key(arg_name) {
             panic!("Argument {} is not defined.", arg_name);
         }
@@ -120,7 +177,33 @@ impl ArgMan {
         if self.is_none(arg_name) {
             panic!("Argument {} is not set.", arg_name);
         }
-        return self.args.get(arg_name).unwrap();
+    }
+
+    pub fn get(&self, arg_name: &str) -> &str {
+        self._common_get(arg_name);
+
+        match self.args_help.get(arg_name).unwrap().arg_type {
+            ArgType::ArgStr => {
+                return &self.args.get(arg_name).unwrap()[..];
+            },
+            _ => panic!("get is being used for {}, which is not defined as a str arg", arg_name),
+        }
+    }
+
+    pub fn get_bool(&self, arg_name: &str) -> bool {
+        self._common_get(arg_name);
+
+        match self.args_help.get(arg_name).unwrap().arg_type {
+            ArgType::ArgBool => {
+                let str_val = &self.args.get(arg_name).unwrap()[..];
+                match str_val {
+                    "0" => return false,
+                    "1" => return true,
+                    _ => panic!("Argument {} is a bool and can only be 0 or 1"),
+                }
+            },
+            _ => panic!("get_bool is being used for {}, which is not defined as a bool arg", arg_name),
+        }
     }
 
     pub fn dev_print_selected_args(&self) {
