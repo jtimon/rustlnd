@@ -154,23 +154,16 @@ fn test_defined_unset_multi() {
     println!("{:?}", g_args.get_multi("-aaa"));
 }
 
-fn is_eq_str_vec(va: &Vec<String>, vb: &Vec<String>) -> bool {
-    (va.len() == vb.len()) &&  // zip stops at the shortest
-     va.iter()
-       .zip(vb)
-       .all(|(a,b)| *a == *b)
-}
-
 // Who tests the test tools?
 #[test]
-fn test_is_eq_vec() {
+fn test_is_eq_str_vec() {
     let v1 = vec!["aaa".to_string(), "bbb".to_string()];
     let v1_repeated = vec!["aaa".to_string(), "bbb".to_string()];
     let v2 = vec!["aaa".to_string(), "ccc".to_string()];
     let v3 = vec!["aaa".to_string(), "bbb".to_string(), "ccc".to_string()];
-    assert!(is_eq_str_vec(&v1, &v1_repeated));
-    assert!(!is_eq_str_vec(&v1, &v2));
-    assert!(!is_eq_str_vec(&v1, &v3));
+    assert!(argman::is_eq_str_vec(&v1, &v1_repeated));
+    assert!(!argman::is_eq_str_vec(&v1, &v2));
+    assert!(!argman::is_eq_str_vec(&v1, &v3));
 }
 
 #[test]
@@ -181,7 +174,7 @@ fn test_get_multistr_arg_1() {
     g_args.add_arg_multi("-aaa", vec![], "Simple string arg");
     assert!(g_args.parse_args_vec(raw_args));
     println!("{:?}", g_args.get_multi("-aaa"));
-    assert!(is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
+    assert!(argman::is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
 }
 
 #[test]
@@ -192,7 +185,7 @@ fn test_get_multistr_arg_2() {
     g_args.add_arg_multi("-aaa", vec![], "Simple string arg");
     assert!(g_args.parse_args_vec(raw_args));
     println!("{:?}", g_args.get_multi("-aaa"));
-    assert!(is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
+    assert!(argman::is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
 }
 
 #[test]
@@ -204,7 +197,7 @@ fn test_defined_default_multistr_1() {
     assert!(g_args.parse_args_vec(raw_args));
     assert_eq!(1, g_args.get_multi("-aaa").len());
     println!("{:?}", g_args.get_multi("-aaa"));
-    assert!(is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
+    assert!(argman::is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
 }
 
 #[test]
@@ -216,7 +209,7 @@ fn test_defined_default_multistrmulti_2() {
     assert!(g_args.parse_args_vec(raw_args));
     assert_eq!(2, g_args.get_multi("-aaa").len());
     println!("{:?}", g_args.get_multi("-aaa"));
-    assert!(is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
+    assert!(argman::is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
 }
 
 #[test]
@@ -229,7 +222,7 @@ fn test_defined_default_changed_multistr_1() {
     assert!(g_args.parse_args_vec(raw_args));
     assert_eq!(2, g_args.get_multi("-aaa").len());
     println!("{:?}", g_args.get_multi("-aaa"));
-    assert!(is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
+    assert!(argman::is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
 }
 
 #[test]
@@ -242,5 +235,5 @@ fn test_defined_default_changed_multistrmulti_2() {
     assert!(g_args.parse_args_vec(raw_args));
     assert_eq!(1, g_args.get_multi("-aaa").len());
     println!("{:?}", g_args.get_multi("-aaa"));
-    assert!(is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
+    assert!(argman::is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
 }

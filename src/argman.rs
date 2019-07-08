@@ -23,6 +23,13 @@ pub struct ArgMan {
     args_multi: HashMap<String, Vec<String>>,
 }
 
+pub fn is_eq_str_vec(va: &Vec<String>, vb: &Vec<String>) -> bool {
+    (va.len() == vb.len()) &&  // zip stops at the shortest
+     va.iter()
+       .zip(vb)
+       .all(|(a,b)| *a == *b)
+}
+
 impl ArgMan {
 
     pub fn new() -> ArgMan {
@@ -107,7 +114,9 @@ impl ArgMan {
             },
 
             ArgType::ArgMultistr => {
-                if self.args_multi.contains_key(name) {
+                if self.args_multi.contains_key(name) &&
+                    !is_eq_str_vec(&self.args_multi.get(name).unwrap().to_vec(), &self.args_help.get(name).unwrap().default_multi) {
+
                     self.args_multi.get_mut(name).unwrap().push(value_to_add);
                 } else {
                     self.args_multi.insert(name.to_string(), vec![value_to_add]);
@@ -159,6 +168,9 @@ impl ArgMan {
 
     pub fn parse_args_vec(&mut self, raw_args: Vec<String>) -> bool {
 
+        // Set defaults first
+        self.set_defaults();
+
         println!("\nraw_args: {:?}", raw_args);
         for raw_arg in raw_args.iter().skip(1) {
 
@@ -188,9 +200,6 @@ impl ArgMan {
                 }
             }
         }
-
-        // Set defaults last if they haven't been set
-        self.set_defaults();
 
         true
     }
