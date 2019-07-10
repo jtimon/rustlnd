@@ -6,21 +6,24 @@ use std::env;
 enum ArgType {
     ArgBool,
     ArgMultistr,
+    ArgMapStr,
     ArgStr,
 }
 
 #[derive(Debug)]
 struct ArgumentHelp {
+    description: String,
     arg_type: ArgType,
     default: Option<String>,
     default_multi: Vec<String>,
-    description: String,
+    default_map: HashMap<String, String>,
 }
 
 pub struct ArgMan {
     args: HashMap<String, String>,
     args_help: HashMap<String, ArgumentHelp>,
     args_multi: HashMap<String, Vec<String>>,
+    args_multi_map: HashMap<String, HashMap<String, String>>,
 }
 
 impl ArgMan {
@@ -30,6 +33,7 @@ impl ArgMan {
             args_help: HashMap::new(),
             args: HashMap::new(),
             args_multi: HashMap::new(),
+            args_multi_map: HashMap::new(),
         }
     }
 
@@ -38,6 +42,7 @@ impl ArgMan {
             arg_type: ArgType::ArgStr,
             default: None,
             default_multi: vec![],
+            default_map: HashMap::new(),
             description: description.to_string(),
         });
     }
@@ -47,6 +52,7 @@ impl ArgMan {
             arg_type: ArgType::ArgStr,
             default: Some(default),
             default_multi: vec![],
+            default_map: HashMap::new(),
             description: description.to_string(),
         });
     }
@@ -60,6 +66,7 @@ impl ArgMan {
             description: description.to_string(),
             default: Some(default),
             default_multi: vec![],
+            default_map: HashMap::new(),
             arg_type: ArgType::ArgBool,
         });
     }
@@ -69,6 +76,7 @@ impl ArgMan {
             description: description.to_string(),
             default: None,
             default_multi,
+            default_map: HashMap::new(),
             arg_type: ArgType::ArgMultistr,
         });
     }
@@ -113,6 +121,27 @@ impl ArgMan {
                     self.args_multi.insert(name.to_string(), vec![value_to_add]);
                 }
             },
+
+            ArgType::ArgMapStr => {
+                let name_split : Vec<&str> = name.split(".").collect();
+                if name_split.len() != 2 {
+                    println!("Incorrect argument syntax: {}\n", name);
+                    println!("There must be one and only one '.' symbol per map argument.");
+                    return false;
+                }
+                let category = name_split[0];
+                let name = name_split[1];
+
+                if self.args_multi_map.contains_key(name) {
+
+                    self.args_multi_map.get_mut(name).unwrap().insert(category.to_string(), value_to_add);
+                } else {
+
+                    let mut per_name_map : HashMap<String, String> = HashMap::new();
+                    per_name_map.insert(category.to_string(), value_to_add);
+                    self.args_multi_map.insert(name.to_string(), per_name_map);
+                }
+            },
         }
         true
     }
@@ -148,6 +177,11 @@ impl ArgMan {
                     if !self.args_multi.contains_key(name) {
                         self.args_multi.insert(name.to_string(), arg_help.default_multi.clone());
                     }
+
+                },
+
+                ArgType::ArgMapStr => {
+
                 },
             }
         }
