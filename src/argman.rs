@@ -6,21 +6,24 @@ use std::env;
 enum ArgType {
     ArgBool,
     ArgMultistr,
+    ArgMapStr,
     ArgStr,
 }
 
 #[derive(Debug)]
 struct ArgumentHelp {
+    description: String,
     arg_type: ArgType,
     default: Option<String>,
     default_multi: Vec<String>,
-    description: String,
+    default_map: HashMap<String, String>,
 }
 
 pub struct ArgMan {
     args: HashMap<String, String>,
     args_help: HashMap<String, ArgumentHelp>,
     args_multi: HashMap<String, Vec<String>>,
+    args_multi_map: HashMap<String, HashMap<String, String>>,
 }
 
 impl ArgMan {
@@ -30,6 +33,7 @@ impl ArgMan {
             args_help: HashMap::new(),
             args: HashMap::new(),
             args_multi: HashMap::new(),
+            args_multi_map: HashMap::new(),
         }
     }
 
@@ -38,6 +42,7 @@ impl ArgMan {
             arg_type: ArgType::ArgStr,
             default: None,
             default_multi: vec![],
+            default_map: HashMap::new(),
             description: description.to_string(),
         });
     }
@@ -47,6 +52,7 @@ impl ArgMan {
             arg_type: ArgType::ArgStr,
             default: Some(default),
             default_multi: vec![],
+            default_map: HashMap::new(),
             description: description.to_string(),
         });
     }
@@ -60,6 +66,7 @@ impl ArgMan {
             description: description.to_string(),
             default: Some(default),
             default_multi: vec![],
+            default_map: HashMap::new(),
             arg_type: ArgType::ArgBool,
         });
     }
@@ -69,7 +76,18 @@ impl ArgMan {
             description: description.to_string(),
             default: None,
             default_multi,
+            default_map: HashMap::new(),
             arg_type: ArgType::ArgMultistr,
+        });
+    }
+
+    pub fn add_arg_with_category(&mut self, name: &str, default_map: HashMap<String, String>, description: &str) {
+        self.args_help.insert(name.to_string(), ArgumentHelp{
+            description: description.to_string(),
+            default: None,
+            default_multi: vec![],
+            default_map,
+            arg_type: ArgType::ArgMapStr,
         });
     }
 
@@ -88,10 +106,15 @@ impl ArgMan {
 
     fn set_arg(&mut self, name: &str, value_to_add: String) -> bool {
 
-        match self.args_help.get(name).unwrap().arg_type {
+        let (parse_ok, parsed_name, category) = ArgMan::get_parsed_name_cateory(name);
+        if !parse_ok {
+            return false;
+        }
+
+        match self.args_help.get(parsed_name).unwrap().arg_type {
 
             ArgType::ArgStr => {
-                self.args.insert(name.to_string(), value_to_add);
+                self.args.insert(parsed_name.to_string(), value_to_add);
             },
 
             ArgType::ArgBool => {
@@ -99,18 +122,31 @@ impl ArgMan {
                     "0" => {},
                     "1"  => {},
                     _ => {
-                        println!("'{}' cannot be parsed as bool (only '0' or '1' allowed')", name);
+                        println!("'{}' cannot be parsed as bool (only '0' or '1' allowed')", parsed_name);
                         return false;
                     },
                 }
-                self.args.insert(name.to_string(), value_to_add);
+                self.args.insert(parsed_name.to_string(), value_to_add);
             },
 
             ArgType::ArgMultistr => {
-                if self.args_multi.contains_key(name) {
-                    self.args_multi.get_mut(name).unwrap().push(value_to_add);
+                if self.args_multi.contains_key(parsed_name) {
+                    self.args_multi.get_mut(parsed_name).unwrap().push(value_to_add);
                 } else {
-                    self.args_multi.insert(name.to_string(), vec![value_to_add]);
+                    self.args_multi.insert(parsed_name.to_string(), vec![value_to_add]);
+                }
+            },
+
+            ArgType::ArgMapStr => {
+
+                if self.args_multi_map.contains_key(parsed_name) {
+
+                    self.args_multi_map.get_mut(parsed_name).unwrap().insert(category.to_string(), value_to_add);
+                } else {
+
+                    let mut per_name_map : HashMap<String, String> = HashMap::new();
+                    per_name_map.insert(category.to_string(), value_to_add);
+                    self.args_multi_map.insert(parsed_name.to_string(), per_name_map);
                 }
             },
         }
@@ -149,8 +185,43 @@ impl ArgMan {
                         self.args_multi.insert(name.to_string(), arg_help.default_multi.clone());
                     }
                 },
+
+                ArgType::ArgMapStr => {
+                    if !self.args_multi_map.contains_key(name) {
+                        self.args_multi_map.insert(name.to_string(), arg_help.default_map.clone());
+                    } else {
+                        // TODO set each default independently if not set
+                        // for category, cat_val in self.args_multi_map.get(name).items() {
+                        // }
+                    }
+                },
             }
         }
+    }
+
+    fn get_parsed_name_cateory(name: &str) -> (bool, &str, &str) {
+
+        let name_split : Vec<&str> = name.split(".").collect();
+        if name_split.len() == 2 {
+
+            return (true, name_split[1], name_split[0]);
+        } else if name_split.len() != 1 {
+
+            println!("Incorrect argument syntax: {}\n", name);
+            println!("There must be one and only one '.' symbol per map argument or none for other arguments.");
+            return (false, "", "");
+        }
+
+        (true, name, "")
+    }
+
+    fn check_defined_argument(&self, name: &str, bin_nme: &str) -> bool {
+        if !self.args_help.contains_key(name) {
+            println!("Unknown argument {}\n", name);
+            println!("Try '{} --help'\n", bin_nme);
+            return false;
+        }
+        true
     }
 
     pub fn parse_args(&mut self) -> bool {
@@ -176,22 +247,21 @@ impl ArgMan {
             }
 
             let name = raw_arg_split[0];
-            if !self.args_help.contains_key(name) {
-
-                println!("Unknown argument {}\n", name);
-                println!("Try '{} --help'\n", raw_args[0]);
+            let (parse_ok, parsed_name, _category) = ArgMan::get_parsed_name_cateory(name);
+            if !parse_ok || !self.check_defined_argument(parsed_name, &raw_args[0]) {
                 return false;
-            } else {
+            }
 
+            {
                 let value_to_add;
                 if raw_arg_split.len() == 1 {
-                    match self.args_help.get(name).unwrap().arg_type {
+                    match self.args_help.get(parsed_name).unwrap().arg_type {
                         ArgType::ArgBool => {
                             value_to_add = "1".to_string();
                         },
                         _ => {
                             println!("Incorrect argument syntax: {}\n", raw_arg);
-                            println!("Argument {} is not a bool and needs an '=' symbol before its value.\n", name);
+                            println!("Argument {} is not a bool and needs an '=' symbol before its value.\n", parsed_name);
                             println!("Try '{} --help'\n", raw_args[0]);
                             return false;
                         },
@@ -205,6 +275,7 @@ impl ArgMan {
                     return false;
                 }
             }
+            println!("\nname : {:?}", name);
         }
 
         // Set defaults last if they haven't been set
@@ -222,13 +293,39 @@ impl ArgMan {
             panic!("Argument {} is not defined.", arg_name);
         }
 
-        if self.args.get(arg_name).is_none() {
-            if self.args_multi.get(arg_name).is_none() {
-                panic!("Argument {} is not set.", arg_name);
-            } else {
-                panic!("Argument {} is an argument that can be repeated, try 'g_args.get_multi(\"{}\")'.", arg_name, arg_name);
-            }
+        match self.args_help.get(arg_name).unwrap().arg_type {
+            ArgType::ArgStr => {
+                if self.args.get(arg_name).is_none() {
+                    panic!("Argument {} is not set.", arg_name);
+                }
+            },
+            ArgType::ArgBool => {
+                if self.args.get(arg_name).is_none() {
+                    panic!("Argument {} is not set.", arg_name);
+                }
+            },
+            ArgType::ArgMultistr => {
+                if self.args_multi.get(arg_name).is_none() {
+                    panic!("Argument {} is not set.", arg_name);
+                }
+            },
+            ArgType::ArgMapStr => {
+                if self.args_multi_map.get(arg_name).is_none() {
+                    panic!("Argument {} is not set.", arg_name);
+                }
+            },
         }
+        // if self.args.get(arg_name).is_none() {
+        //     if self.args_multi.get(arg_name).is_none() {
+        //         panic!("Argument {} is not set.", arg_name);
+        //     } else if self.args_multi_map.get(arg_name).is_none() {
+        //         panic!("Argument {} is not set.", arg_name);
+        //     } else {
+        //         match
+        //         panic!("Argument {} is an argument that can be repeated, try 'g_args.get_multi(\"{}\")'.", arg_name, arg_name);
+        //     } else {
+        //     }
+        // }
     }
 
     pub fn get(&self, arg_name: &str) -> &str {
@@ -239,6 +336,28 @@ impl ArgMan {
                 return &self.args.get(arg_name).unwrap()[..];
             },
             _ => panic!("get is being used for {}, which is not defined as a str arg", arg_name),
+        }
+    }
+
+    pub fn get_by_category(&self, category: &str, arg_name: &str) -> &str {
+        if !self.args_help.contains_key(arg_name) {
+            panic!("Argument {} is not defined.", arg_name);
+        }
+
+        match self.args_help.get(arg_name).unwrap().arg_type {
+            ArgType::ArgMapStr => {
+
+                if !self.args_multi_map.contains_key(arg_name) {
+                    panic!("Argument {} is not set.", arg_name);
+                }
+
+                if !self.args_multi_map.get(arg_name).unwrap().contains_key(category) {
+                    panic!("no {} category for argument {}", category, arg_name);
+                }
+
+                return &self.args_multi_map.get(arg_name).unwrap().get(category).unwrap()[..];
+            },
+            _ => panic!("get is being used for {}, which is not defined as a map arg", arg_name),
         }
     }
 

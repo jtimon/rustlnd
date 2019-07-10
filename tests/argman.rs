@@ -3,6 +3,8 @@
 
 use rustlnd::argman;
 
+use std::collections::HashMap;
+
 #[test]
 fn test_get_str_arg() {
     let raw_args = vec!["binname".to_string(), "-aaa=EXPECTED_STR".to_string()];
@@ -253,4 +255,64 @@ fn test_defined_default_changed_multistrmulti_2() {
     assert_eq!(1, g_args.get_multi("-aaa").len());
     println!("{:?}", g_args.get_multi("-aaa"));
     assert!(is_eq_str_vec(&expected_vec, g_args.get_multi("-aaa")));
+}
+
+#[test]
+#[should_panic(expected = "Argument -aaa is not defined.")]
+fn test_undefined_category() {
+    let raw_args = vec!["binname".to_string()];
+    let mut g_args = argman::ArgMan::new();
+    assert!(g_args.parse_args_vec(raw_args));
+    g_args.get_by_category("-cat1", "-aaa");
+}
+
+#[test]
+#[should_panic(expected = "get is being used for -aaa, which is not defined as a str arg")]
+fn test_defined_unset_category() {
+    let raw_args = vec!["binname".to_string()];
+    let mut g_args = argman::ArgMan::new();
+    let default_map: HashMap<String, String> = HashMap::new();
+    g_args.add_arg_with_category("-aaa", default_map, "Simple string arg");
+    assert!(g_args.parse_args_vec(raw_args));
+    println!("{:?}", g_args.get("-aaa"));
+}
+
+#[test]
+#[should_panic(expected = "get is being used for -aaa, which is not defined as a map arg")]
+fn test_defined_unset_category_wrong_type() {
+    let raw_args = vec!["binname".to_string()];
+    let mut g_args = argman::ArgMan::new();
+    g_args.add_arg_unset("-aaa", "Simple string arg");
+    assert!(g_args.parse_args_vec(raw_args));
+    println!("{:?}", g_args.get_by_category("-cat1", "-aaa"));
+}
+
+#[test]
+#[should_panic(expected = "no -cat1 category for argument -aaa")]
+fn test_defined_category_default_empty() {
+    let raw_args = vec!["binname".to_string()];
+    let mut g_args = argman::ArgMan::new();
+    let default_map: HashMap<String, String> = HashMap::new();
+    g_args.add_arg_with_category("-aaa", default_map, "Simple string arg");
+    assert!(g_args.parse_args_vec(raw_args));
+    println!("{:?}", g_args.get_by_category("-cat1", "-aaa"));
+}
+
+#[test]
+fn test_add_with_category_0_equals() {
+    let raw_args = vec!["binname".to_string(), "-cat1.-aaa".to_string()];
+    let mut g_args = argman::ArgMan::new();
+    let default_map: HashMap<String, String> = HashMap::new();
+    g_args.add_arg_with_category("-aaa", default_map, "Simple string arg");
+    assert!(!g_args.parse_args_vec(raw_args));
+}
+
+#[test]
+fn test_get_by_category() {
+    let raw_args = vec!["binname".to_string(), "-cat1.-aaa=myval".to_string()];
+    let mut g_args = argman::ArgMan::new();
+    let default_map: HashMap<String, String> = HashMap::new();
+    g_args.add_arg_with_category("-aaa", default_map, "Simple string arg");
+    assert!(g_args.parse_args_vec(raw_args));
+    println!("{:?}", g_args.get_by_category("-cat1", "-aaa"));
 }
