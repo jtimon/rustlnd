@@ -15,6 +15,7 @@ struct ArgumentHelp {
     default: Option<String>,
     default_multi: Vec<String>,
     description: String,
+    category: String,
 }
 
 pub struct ArgMan {
@@ -33,22 +34,32 @@ impl ArgMan {
         }
     }
 
-    pub fn add_arg_unset(&mut self, name: &str, description: &str) {
+    pub fn add_arg_unset_category(&mut self, category: &str, name: &str, description: &str) {
         self.args_help.insert(name.to_string(), ArgumentHelp{
             arg_type: ArgType::ArgStr,
             default: None,
             default_multi: vec![],
             description: description.to_string(),
+            category: category.to_string(),
         });
     }
 
-    pub fn add_arg(&mut self, name: &str, default: String, description: &str) {
+    pub fn add_arg_unset(&mut self, name: &str, description: &str) {
+        self.add_arg_unset_category("common", name, description);
+    }
+
+    pub fn add_arg_category(&mut self, category: &str, name: &str, default: String, description: &str) {
         self.args_help.insert(name.to_string(), ArgumentHelp{
             arg_type: ArgType::ArgStr,
             default: Some(default),
             default_multi: vec![],
             description: description.to_string(),
+            category: category.to_string(),
         });
+    }
+
+    pub fn add_arg(&mut self, name: &str, default: String, description: &str) {
+        self.add_arg_category("common", name, default, description);
     }
 
     pub fn add_arg_bool(&mut self, name: &str, default: String, description: &str) {
@@ -61,6 +72,7 @@ impl ArgMan {
             default: Some(default),
             default_multi: vec![],
             arg_type: ArgType::ArgBool,
+            category: "common".to_string(),
         });
     }
 
@@ -70,6 +82,7 @@ impl ArgMan {
             default: None,
             default_multi,
             arg_type: ArgType::ArgMultistr,
+            category: "common".to_string(),
         });
     }
 
