@@ -46,7 +46,7 @@ cargo build && cargo run -- -p2phost=localhost:8888
 For development, the following can be another example:
 
 ```
-cargo test && cargo run -- --help && cargo run -- -chain=aaa -chain=bbb -p2phost=localhost:8888
+cargo test && cargo run -- --help && cargo run -- -p2phost=localhost:8888 -chain=aaa -chain=bbb aaa.-rpchost=localhost:1111 aaa.-rpcuser=alice aaa.-rpcuser=alice aaa.-rpcpass=alice_in_chains bbb.-rpchost=localhost:2222 bbb.-rpcuser=bob bbb.-rpcpass=bob_change_pass
 ```
 
 
