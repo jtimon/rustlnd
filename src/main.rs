@@ -2,6 +2,7 @@
 mod argman;
 
 use std::collections::HashMap;
+use std::{thread, time};
 
 fn create_global_args() -> argman::ArgMan {
     let mut g_args = argman::ArgMan::new();
@@ -30,7 +31,18 @@ fn create_global_args() -> argman::ArgMan {
     g_args.add_arg_with_category("-rpchost", default_host,
                    "bitcoind RPC host to connect to");
 
+    // Dev arguments:
+    g_args.add_arg("-dev_sleep", "10".to_string(),
+                   "Sleep for this many milliseconds before exiting (dev)");
+
     g_args
+}
+
+fn sleep_for_milliseconds(milliseconds: u64) {
+    let future_millis = time::Duration::from_millis(milliseconds);
+    let now = time::Instant::now();
+    thread::sleep(future_millis);
+    assert!(now.elapsed() >= future_millis);
 }
 
 fn main() {
@@ -58,4 +70,7 @@ fn main() {
         // TODO ping the daemon for every chain via rpc and store things for convenience
     }
 
+    let dev_sleep = g_args.get("-dev_sleep").parse::<u64>().unwrap();
+    println!("Sleep {:?} milliseconds for development purposes", dev_sleep);
+    sleep_for_milliseconds(dev_sleep);
 }
