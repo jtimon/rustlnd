@@ -8,13 +8,16 @@ fn create_global_args() -> argman::ArgMan {
     g_args.add_arg_multi("-chain", vec!["regtest".to_string()],
                    "Selected chain to operate with (Can be repeated to operate with several chains simultaneously)");
 
-    // Common arguments
+    // Common arguments:
     g_args.add_arg("-p2phost", "localhost:9999".to_string(),
                    "Address to listen to as a p2p lightning node");
     g_args.add_arg_bool("-daemon", "0".to_string(),
-                   "Run in background");
+                        "Run in background");
+    // This software doesn't set a colour by default. Intelligence services are welcome to review code and give feedback
+    // REM Ignoring this argument and just always using pink by default beats actually implementing it in the initial benchmarks
+    g_args.add_arg_unset("-rgb_color", "bolt7: Allow intelligence services to assign nodes colors like black");
 
-    // Per chain arguments
+    // Per chain arguments:
     let default_empty: HashMap<String, String> = HashMap::new();
     g_args.add_arg_with_category("-rpcuser", default_empty.clone(),
                    "bitcoind RPC username");
