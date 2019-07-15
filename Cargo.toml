@@ -6,3 +6,9 @@ edition = "2018"
 license = "MIT"
 
 [dependencies]
+bitcoin = "0.18.0"
+bitcoin-bech32 = "0.9.0"
+bitcoin_hashes = "0.3.2"
+lightning = "0.0.9"
+rand = "0.4.6"
+secp256k1 = "0.12.2"
